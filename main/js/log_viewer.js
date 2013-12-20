@@ -51,6 +51,14 @@ function filter() {
   console.log("Filtering done.");
 }
 
+function zeroPad(src, padLen) {
+  var s = src;
+  while (s.length < padLen) {
+    s = "0" + s;
+  }
+  return s;
+}
+
 function displayLines(start) {
   curPtr = start;
 
@@ -88,11 +96,16 @@ function displayLines(start) {
         break;
       lineNo = filterMap[lineNo];
     }
-    var dt =  Date(data.log[lineNo].ts);
+    var dt = new Date( Date(data.log[lineNo].ts));
+    var mth = dt.getMonth()+1;
+    var stamp = dt.getFullYear() + "-" + mth + "-" + dt.getDate() + " " +
+      dt.getHours() + ":" + dt.getMinutes() + ":" + dt.getSeconds() + "." + dt.getMilliseconds();
+    stamp = sprintf("%04d-%02d-%02d %02d:%02d:%02d", dt.getFullYear(),
+      mth, dt.getDate(), dt.getHours(), dt.getMinutes(), dt.getSeconds());
     var msg = data.log[lineNo].msg.replace(filterExpr, "\<span class=\"highlight-text\"\>$1\<\/span\>");
 
     html += "<tr class=\"log-" + data.log[lineNo].ll.toLowerCase() + "\">"
-      + "<td>" + dt.toLocaleString().substring(4,24) + "</td>"
+      + "<td>" + stamp + "</td>"
       + "<td>" + data.log[lineNo].th + "</td>"
       + "<td>" + data.log[lineNo].ll + "</td>"
       + "<td>" + data.log[lineNo].cl + "</td>"
