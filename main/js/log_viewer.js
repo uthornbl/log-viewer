@@ -24,6 +24,7 @@ function fetchData() {
     // fixFilter();
     displayLines(0);
     console.log("All done");
+    $("#filter_msg").focus().select();
   });
 }
 
@@ -32,6 +33,7 @@ function fixFilter() {
   filter_msg = $("#filter_msg").val();
   filter();
   displayLines(0);
+  $("#filter_msg").focus().select();
 }
 
 function filter() {
@@ -102,7 +104,11 @@ function displayLines(start) {
       dt.getHours() + ":" + dt.getMinutes() + ":" + dt.getSeconds() + "." + dt.getMilliseconds();
     stamp = sprintf("%04d-%02d-%02d %02d:%02d:%02d", dt.getFullYear(),
       mth, dt.getDate(), dt.getHours(), dt.getMinutes(), dt.getSeconds());
-    var msg = data.log[lineNo].msg.replace(filterExpr, "\<span class=\"highlight-text\"\>$1\<\/span\>");
+    // Highlight GUIDs
+    var msg = data.log[lineNo].msg.replace(/(guid[:= ]*)([0-9a-f]{20,})/ig, "$1\<span class=\"highlight-guid\"\>$2\<\/span\>");
+    // Highlight search hits
+    msg = msg.replace(filterExpr, "\<span class=\"highlight-text\"\>$1\<\/span\>");
+
 
     html += "<tr class=\"log-" + data.log[lineNo].ll.toLowerCase() + "\">"
       + "<td>" + stamp + "</td>"

@@ -59,3 +59,9 @@ tr:hover {
     background-color: rgb(255,255,0);
     color: rgb(0,0,255);
 }
+
+.highlight-guid {
+    background-color: rgb(200,200,255);
+    color: rgb(0,0,0);
+    border: outset;
+}
