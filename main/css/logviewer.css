@@ -1,4 +1,4 @@
-table {
+table.hive {
     width: 100%;
 }
 
@@ -33,6 +33,12 @@ tr:hover {
 
 .big {
     font-size: 20px;
+    height: 30px;
+}
+
+th.tsheader {
+    padding-top: 5px;
+    font-size: 12px;
     height: 30px;
 }
 
