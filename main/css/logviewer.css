@@ -1,3 +1,69 @@
+.grid .tick {
+    stroke: lightgrey;
+    opacity: 0.7;
+}
+.grid path {
+    stroke-width: 2;
+}
+
+path {
+    stroke-width: 3;
+    fill: none;
+}
+
+.data1 {
+    stroke: steelblue;
+}
+
+.data2 {
+    stroke: orange;
+}
+
+.data3 {
+    stroke: yellow;
+}
+
+.data4 {
+    color: #00ff00;
+}
+
+.axis {
+    shape-rendering: crispEdges;
+}
+
+.x.axis line {
+    stroke: lightgrey;
+}
+
+.x.axis .minor {
+    stroke-opacity: .5;
+}
+
+.x.axis path {
+    display: none;
+}
+
+.x.axis text {
+    font-size: 14;
+}
+
+.y.axis line, .y.axis path {
+    fill: none;
+    stroke: #000;
+}
+
+.y.axis text {
+    font-size: 14;
+}
+
+.y.axisRight text {
+    fill: orange;
+}
+
+.y.axisLeft text {
+    fill: steelblue;
+}
+
 table.hive {
     width: 100%;
 }
@@ -76,4 +142,12 @@ th.tsheader {
     background-color: rgb(200,200,255);
     color: rgb(0,0,0);
     border: outset;
+}
+
+#graph {
+}
+
+.legend-text {
+    background-color: #d3d3d3;
+    color: white;
 }

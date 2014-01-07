@@ -3,18 +3,26 @@
 <head>
   <meta charset="UTF-8">
   <title>Hive Log Viewer</title>
-  <link rel="stylesheet" href="css/bootstrap.min.css">
-  <link rel="stylesheet" href="css/bootstrap-theme.min.css">
+  <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css">
+  <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap-theme.min.css">
   <link rel="stylesheet" href="css/logviewer.css">
+
   <!-- Load the jQuery UI CSS -->
-  <link rel="stylesheet" href="css/jquery_ui_1-10-3_smooth.css" />
+  <link rel="stylesheet" href="//code.jquery.com/ui/1.10.3/themes/ui-darkness/jquery-ui.css" />
 
   <script src="js/jquery_191.min.js" type="text/javascript"></script>
   <script src="js/jquery_ui_1-10-3.js"></script>
+  <script src="//netdna.bootstrapcdn.com/bootstrap/3.0.3/js/bootstrap.min.js"></script>
   <script src="js/sprintf.js" type="text/javascript"></script>
+  <script src="http://d3js.org/d3.v3.min.js" type="text/javascript"></script>
+  <script src="https://www.google.com/jsapi" type="text/javascript"></script>
+
   <script src="js/log_viewer.js" type="text/javascript"></script>
+
 </head>
 <body>
+
+<div id="graph" class=""aGraph"></div>
 
 <table id="logTable" class="hive">
   <tbody>
