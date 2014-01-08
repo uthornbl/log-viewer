@@ -344,8 +344,8 @@ function displayLines(start) {
   var html = ""
     + "<tr class=\"big\">"
     + "<th>#"
-    + "<br/><input class=\"lineNumber\" size=\"6\" id=\"linesFrom\" />"
-    + "<br/><input class=\"lineNumber\" size=\"6\" id=\"linesTo\" />"
+    + "<br/><span class=\"lineNumber\" id=\"linesFrom\" />"
+    + "<br/><span class=\"lineNumber\" id=\"linesTo\" />"
     + "</th>"
     + "<th class=\"tsheader\"><button id=\"prevPage\">&lt;</button>" + pageNo + "<button id=\"nextPage\">&gt;</button>"
     + "&nbsp;<button id=\"eofPage\">&gt;&gt;</button>"
@@ -402,8 +402,8 @@ function displayLines(start) {
   // return;
   dataTable.html(html);
 
-  $("#linesFrom").val(start+1);
-  $("#linesTo").val(start+linesPerPage);
+  $("#linesFrom").text(start+1);
+  $("#linesTo").text(start+linesPerPage);
 
   $("#tslide").slider( { value: pageNo, min: 1, max: lastPage, orientation: "horizontal",
       change: function(event, ui) {
