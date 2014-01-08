@@ -21,6 +21,8 @@ $(document).ready( function() {
 })
 
 function fetchData() {
+  // Make sure Swedish characters get treated with respect ;-)
+  // $.ajaxSetup({ scriptCharset: "windows-1252" , contentType: "application/json; charset=windows-1252"});
   $.getJSON("logs/RC.log.json", function(jsonData) {
     data = jsonData;
     console.log("Got data");
@@ -77,6 +79,12 @@ function pageEOF() {
   var ptr = ( lastLine >= linesPerPage ) ? lastLine - linesPerPage + 1 : 0;
   pageNo = Math.floor( ptr / linesPerPage ) + 1;
   displayLines(ptr);
+}
+
+// Go to specific page
+function setLinesPerPage(pg) {
+  linesPerPage = pg;
+  displayLines(curPtr);
 }
 
 function clearFilter() {
@@ -185,7 +193,6 @@ function plotVideoGraph() {
       .tickSize(-w - margin.left - margin.right, 0, 0)
       .tickFormat("")
     );
-
 
   graph.append("svg:path").attr("d", line1(mtrElapsed)).attr("class", "data1")
   graph.append("svg:path").attr("d", line1(mtrP2PBps)).attr("class", "data2");
@@ -336,10 +343,14 @@ function displayLines(start) {
   // var html = "<tbody class=\"hive\">"
   var html = ""
     + "<tr class=\"big\">"
-    + "<th>Row</th>"
+    + "<th>#"
+    + "<br/><input class=\"lineNumber\" size=\"6\" id=\"linesFrom\" />"
+    + "<br/><input class=\"lineNumber\" size=\"6\" id=\"linesTo\" />"
+    + "</th>"
     + "<th class=\"tsheader\"><button id=\"prevPage\">&lt;</button>" + pageNo + "<button id=\"nextPage\">&gt;</button>"
     + "&nbsp;<button id=\"eofPage\">&gt;&gt;</button>"
     + "<br/><div id=\"tslide\" style=\"margin-top: 5px;\"></div>"
+    + "<br/><div id=\"pslide\" style=\"margin-top: 5px;\"></div>"
     + "</th>"
     + "<th>Thread</th>"
     + "<th>LogLevel</th>"
@@ -358,6 +369,7 @@ function displayLines(start) {
     + "</th>"
     + "</tr>";
 
+  var onGuidClick = "onClick=\"alert('This would take you to the associated GUID log.');\"";
   for (var offset=0; offset<linesPerPage; offset++) {
     var lineNo = start + offset;
     if (lineNo >= data.log.length)
@@ -372,14 +384,13 @@ function displayLines(start) {
     var dt = new Date( data.log[lineNo].ts / 1 );
     var ltime = dt.toISOString().match(/(\d{4}\-\d{2}\-\d{2})T(\d{2}:\d{2}:\d{2})/);
     // Highlight GUIDs
-    var msg = data.log[lineNo].msg.replace(/(guid[:= ]*)([0-9a-f]{20,})/ig, "$1\<span class=\"highlight-guid\"\>$2\<\/span\>");
+    var msg = data.log[lineNo].msg.replace(/(guid[:= ]*)([0-9a-f]{20,})/ig, "$1\<span " + onGuidClick + " class=\"highlight-guid\"\>$2\<\/span\>");
     // Highlight search hits
     if (filtered)
       msg = msg.replace(filterExpr, "\<span class=\"highlight-text\"\>$1\<\/span\>");
 
-
     html += "<tr class=\"log-" + data.log[lineNo].ll.toLowerCase() + "\">"
-      + "<td>" + lineNo + "</td>"
+      + "<td>" + (lineNo+1) + "</td>"
       + "<td>" + ltime[1] + " " + ltime[2] + "</td>"
       + "<td>" + data.log[lineNo].th + "</td>"
       + "<td>" + data.log[lineNo].ll + "</td>"
@@ -391,11 +402,19 @@ function displayLines(start) {
   // return;
   dataTable.html(html);
 
+  $("#linesFrom").val(start+1);
+  $("#linesTo").val(start+linesPerPage);
+
   $("#tslide").slider( { value: pageNo, min: 1, max: lastPage, orientation: "horizontal",
       change: function(event, ui) {
         pageGoTo(ui.value);
       }
     });
+  $("#pslide").slider( { value: linesPerPage, min: 1, max: 1000, orientation: "horizontal",
+    change: function(event, ui) {
+      setLinesPerPage(ui.value);
+    }
+  });
   $("#nextPage").click(
     function() { pageNext(); }
   );
