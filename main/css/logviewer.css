@@ -1,18 +1,25 @@
 .grid .tick {
     stroke: lightgrey;
-    opacity: 0.7;
+    opacity: 0.9;
+    stroke-width: 0.5;
 }
+
 .grid path {
     stroke-width: 2;
 }
 
+.area {
+    fill: steelblue;
+    stroke-width: 1;
+}
+
 path {
-    stroke-width: 3;
+    stroke-width: 2;
     fill: none;
 }
 
 .data1 {
-    stroke: steelblue;
+    stroke: blue;
 }
 
 .data2 {
@@ -40,7 +47,7 @@ path {
 }
 
 .x.axis path {
-    display: none;
+    display: block;
 }
 
 .x.axis text {

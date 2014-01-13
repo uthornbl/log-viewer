@@ -101,59 +101,152 @@ function clearFilter() {
 function plotVideoGraph() {
   // var filterExpr = new RegExp("(\[video\]\w+([0-9]+))", "i");
   // filterExpr.compile();
+  var ww = $( window ).width()-30;
+  var hh = $( window ).height()-30;
   $("#graph").dialog({
-    width: 640,
-    height: 480,
+    width: ww,
+    height: hh,
     title: "Video metrics",
     resizable: false
   });
 
-  var mtrElapsed = [];
-  var mtrP2PBps = [];
-  var mtrFBBps = [];
-  var mtrBufferings = [];
-  var colors = ['steelblue', 'orange', 'yellow', '#00ff00'];
-  var header =
-    [ "Elapsed", "P2PBps", "FallbackBps", "Bufferings" ];
+  /*
+  P2P avg down rate
+  Fallback avg down rate
+  total bufferings
+  prefetch
+  p2p Time
+  Fallback Time
+  fallback down size
+  P2P down size
+  playback buffer size
+  bitrate
 
+  0: elapsed
+  1: agentTime
+  2: p2pTime
+  3: 0
+  4: videoP2PAvgBps * 0.008D
+  5: videoFallAvgBps * 0.008D
+  6: id.getBitrate() / 1000
+  7: agentDown / 1000
+  8: downloaded / 1000
+  9: 0
+ 10: playerBuffer
+ 11: totalBufferings
+ 12: fragmentTime
+ 13: playerVideoAvg * 0.008D
+ 14: (Mesmerizer.currentTimeMillis() - startPlaying)
+ 15: id.getTimestamp()
+   */
+  var dataSet = [];
+  var colors = ['steelblue', 'orange', 'yellow', '#00ff00',
+    '#a0a0a0', '#bc4923', '#981288', '#235578', '#10cc98',
+    '#cc8888'];
+  var metricIndex = [4, 5, 11, 7, 2, 3, 9, 8, 10, 6];
+  var header = [ "P2P avg down rate", "Fallback avg down rt", "Total bufferings", "Prefetch",
+      "P2P Time", "Fallback Time", "Fallback down size", "P2P down size", "Playback buffer size",
+      "Bitrate" ];
+  var xAxisValues = [];
+  var tstamps = [];
+  var ts_last = 0;
+
+  // Initialise dataSet with empty arrays
+  for (var i=0; i<metricIndex.length; i++) {
+    dataSet.push([]);
+  }
 
   var sample = 0,
-    margin = {top: 5, right: 5, bottom: 15, left: 5},
-    w = $("#graph").width() - margin.left - margin.right,
-    h = $("#graph").height() - margin.top - margin.bottom;
+    margin = {top: 5, right: 160, bottom: 30, left: 50},
+    w = $("#graph").width() - margin.left - margin.right -20,
+    h = $("#graph").height() - margin.top - margin.bottom -20;
 
   d3.select("#TheGraph").remove();
 
-  var max1 = 0, min1;
+  var max1 = 0, min1, ts_first, ts_last;
   for (var pt=0; pt<data.log.length; pt++) {
     var isMatch = data.log[pt].msg.match(/\[video\]\s+([0-9.-]+)/ig);
     if (isMatch) {
-      var grp = data.log[pt].msg.match(/([0-9.-]+)/ig);
+      var grp1 = data.log[pt].msg.match(/([0-9.-]+)/ig);
       /* DEBUG
       var ls = "";
       for (var j=0; j<grp.length; j++) {
         ls += "[" + j + ":" + grp[j] + "] ";
       }
       */
+      // Clean up the values and make them numeric
+      var grp = $.map( grp1, function(val,i) {
+        switch (i) {
+          case 0:
+            return Math.floor(val * 1.0);
+            break;
+          case 1:
+            // return Math.floor(val * -1.0);
+            return 0; // Not interested in this value
+            break;
+          case 4:
+            return Math.floor(val / 100.0);
+            break;
+          case 5:
+            return Math.floor(val / 100.0);
+            break;
+          case 10:
+            return Math.floor(val / 100);
+            break;
+          case 11:
+            return Math.floor(val * 1.0);
+            break;
+          case 14:
+            return Math.floor(val / 1000.0);
+            break;
+          default:
+            return val * 1.0;
+        }
+      });
+      var dt = new Date( data.log[pt].ts / 1 );
+      var tstamp = dt.toISOString().match(/(\d{4}\-\d{2}\-\d{2})T(\d{2}:\d{2}:\d{2})/)[2];
+      if (sample/1 == Math.floor(sample/1))
+        tstamps.push(tstamp);
+
+      if (ts_first == undefined) { ts_first = tstamp; ts_last = tstamp; }
+      if (tstamp > ts_last) ts_last = tstamp;
+      var minCandidate = Math.min.apply(Math,grp.slice(0,4));
+      var maxCandidate = Math.max.apply(Math,grp.slice(0,4));
+
+      // Fix max and min values
+      if (min1 == undefined) { min1 =  minCandidate; }
+      if (minCandidate < min1) { min1 = minCandidate; }
+      if (maxCandidate > max1) max1 = maxCandidate;
+
+      ts_last = grp[14];
+
+      for (var i=0; i<metricIndex.length; i++) {
+        // dataSet[i].push({x:tstamp, y:grp[metricIndex[i]]});
+        dataSet[i].push({x:ts_last, y:grp[metricIndex[i]]});
+      }
       sample++;
-      if (min1 == undefined) { min1 = grp[0] * 1.0; }
-      if (grp[0] * 1.0 < min1) { min1 = grp[0] * 1.0; }
-      if (grp[0] * 1.0 > max1) max1 = grp[0];
-      mtrElapsed.push({x:sample, y:grp[0] * 1.0});
-      mtrP2PBps.push({x:sample, y:Math.floor(grp[4]*1.0)});
-      mtrFBBps.push({x:sample, y:Math.floor(grp[5]/100.0)});
-      mtrBufferings.push({x:sample, y:grp[11]*1.0});
-      // console.log(grp[0] + " : " + grp[4] + " : " + Math.floor(grp[5]/100.0) + " : " + grp[11]);
+      console.log(tstamp + " (" + max1 + ") | " + grp.join("|"));
     }
   }
-  var parseDate = d3.time.format("%Y-%m-%d").parse;
-  var dataSet = [ mtrElapsed, mtrP2PBps, mtrFBBps, mtrBufferings ];
+  // var parseDate = d3.time.format("%Y-%m-%d").parse;
+  // var dataSet = [ mtrElapsed, mtrP2PBps, mtrFBBps, mtrBufferings ];
+  // max1 = 500;
 
   // Samples per line
   var m = ( sample > 50 ) ? 50 : sample;
   // m = sample;
-  var xScale = d3.scale.linear().domain([0, m - 1]).range([margin.left, w]);
-  var y1 = d3.scale.linear().domain([min1, max1]).range([h,margin.bottom]);
+  var xScale = d3.scale.linear().domain([0, ts_last]).range([margin.left, w]);
+  // var xScale = d3.scale.ordinal().domain(xAxisValues).range([margin.left, w]);
+  // var xScale = d3.scale.ordinal().domain(tstamps).rangePoints([margin.left, w]);
+  // var xScale = d3.scale.ordinal().domain(tstamps).rangeRoundBands([margin.left, w]);
+  var y1 = d3.scale.linear().domain([min1, max1]).range([h+margin.top,margin.top]);
+  /*
+  var xScale = d3.scale.ordinal()
+    .domain(tstamps)
+    .rangeRoundBands([margin.left, w]);
+    */
+
+  // alert(min1 + "/" + max1 + "  -  Testing scale value for 15:36:55 => " + xScale("15:36:55"));
 
   // create a line function that can convert data[] into x and y points
   var line1 = d3.svg.line()
@@ -172,32 +265,62 @@ function plotVideoGraph() {
       return y1(d.y);
     });
 
+  // create an area function that can convert data[] into x and y points
+  var area1 = d3.svg.area()
+    .interpolate("basis")
+    // assign the X function to plot our line as we wish
+    .x(function(d,i) {
+      // verbose logging to show what's actually being done
+      // console.log('Plotting X1 value for data point: ' + d.x + ' using index: ' + i + '/' + sample + ' to be at: ' + xScale(d.x) + ' using our xScale.');
+      // return the X coordinate where we want to plot this datapoint
+      return xScale(d.x);
+    })
+    .y0(h+margin.top)
+    .y1(function(d) {
+      // verbose logging to show what's actually being done
+      // console.log('Plotting Y1 value for data point: ' + d.y + ' to be at: ' + y1(d.y) + "/" + h + "/" + max1 + " using our y1 scale.");
+      // return the Y coordinate where we want to plot this datapoint
+      return y1(d.y);
+    });
+
   // Add an SVG element with the desired dimensions and margin.
   var graph = d3.select("#graph")
     .append("svg")
     .attr("width", w + margin.left + margin.right)
-    .attr("height", h + margin.top + margin.bottom)
+    .attr("height", h + margin.bottom + margin.top)
     .attr("id", "TheGraph");
 
+  // X Axis
   graph.append("svg:g")
-    .attr("class", "grid")
-    .attr("transform", "translate(0," + h + ")")
+    .classed("grid", "true")
+    .attr("transform", "translate(0," + (margin.top + 20) + ")")
     .call(make_x_axis(xScale)
-      .tickSize(-h, 0, 0)
+      .tickSize(h+margin.top - 10)
+      //.tickFormat(d3.format("0f"))
+    );
+
+  // Y Axis
+  graph.append("svg:g")
+    .classed("grid", "true")
+    .attr("transform", "translate(45,0)")
+    .call(make_y_axis(y1)
+      // .tickSize(-w - margin.left - margin.right, 0, 0)
+      .tickSize(-w,0,0)
       .tickFormat(d3.format("0f"))
     );
 
-  graph.append("svg:g")
-    .attr("class", "grid")
-    .call(make_y_axis(y1)
-      .tickSize(-w - margin.left - margin.right, 0, 0)
-      .tickFormat("")
-    );
 
-  graph.append("svg:path").attr("d", line1(mtrElapsed)).attr("class", "data1")
+  // return;
+  for (var gn=0; gn<dataSet.length; gn++) {
+  // for (var gn=3; gn<4; gn++) {
+    // graph.append("svg:path").attr("d", area1(dataSet[gn])).classed("data1 area", "true");
+    graph.append("svg:path").attr("d", line1(dataSet[gn])).classed("data1", "true").style("stroke", colors[gn]);
+  }
+  /*
   graph.append("svg:path").attr("d", line1(mtrP2PBps)).attr("class", "data2");
   graph.append("svg:path").attr("d", line1(mtrFBBps)).attr("class", "data3");
   graph.append("svg:path").attr("d", line1(mtrBufferings)).attr("class", "data4");
+  */
 
   var legend = graph.append("g")
     .attr("class", "legend");
@@ -206,7 +329,7 @@ function plotVideoGraph() {
     .data(dataSet)
     .enter()
     .append("rect")
-    .attr("x", w - 95)
+    .attr("x", margin.right + w - 110)
     .attr("y", function(d, i){ return i *  20 + 9;})
     .attr("width", 10)
     .attr("height", 10)
@@ -220,7 +343,7 @@ function plotVideoGraph() {
     .enter()
     .append("text")
     .attr("class", "legend-text")
-    .attr("x", w - 82)
+    .attr("x", margin.right + w - 90)
     .attr("y", function(d, i){ return i *  20 + 19;})
     .style("fill", "white")
     .text(function(d) {
