@@ -71,7 +71,7 @@ path {
     fill: steelblue;
 }
 
-table.hive {
+table.mars {
     width: 100%;
 }
 
@@ -112,7 +112,7 @@ tr:hover {
 th.tsheader {
     padding-top: 5px;
     font-size: 12px;
-    height: 30px;
+    height: 20px;
 }
 
 .log-debug {
@@ -124,8 +124,16 @@ th.tsheader {
     background-color: rgb(200,255,200);
     color: rgb(0,0,0);
 }
+.log-progress {
+    background-color: rgb(150,255,150);
+    color: rgb(0,0,0);
+}
 
 .log-warn {
+    background-color: rgb(255,255,150);
+    color: rgb(0,0,100);
+}
+.log-minor {
     background-color: rgb(255,255,150);
     color: rgb(0,0,100);
 }
@@ -134,8 +142,16 @@ th.tsheader {
     background-color: rgb(200,0,0);
     color: rgb(255,255,255);
 }
+.log-major {
+    background-color: rgb(200,0,0);
+    color: rgb(255,255,255);
+}
 
 .log-fatal {
+    background-color: rgb(200,0,0);
+    color: rgb(255,255,0);
+}
+.log-critical {
     background-color: rgb(200,0,0);
     color: rgb(255,255,0);
 }

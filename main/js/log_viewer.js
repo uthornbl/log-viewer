@@ -2,18 +2,19 @@
  * Created by U on 2013-12-18.
  */
 
-var data;
+var data = [];
 var linesPerPage = 100;
 var maxLines = 0;
 var pageNo = 0;
 var curPtr = 0;
 var dataTable;
 var filterMap = [];
-var filterExpr;
+var filterExpr1;
 var filter_loglevel = "";
 var filter_msg = "";
+var filter_mod = "";
 var filtered = false;
-var logLevels = ["DEBUG","INFO","WARN","ERROR","FATAL"];
+var logLevels = ["DEBUG","INFO","PROGRESS","WARN","MINOR","MAJOR","CRITICAL"];
 
 $(document).ready( function() {
   dataTable = $("#logTable tbody");
@@ -21,15 +22,27 @@ $(document).ready( function() {
 })
 
 function fetchData() {
-  // Make sure Swedish characters get treated with respect ;-)
-  // $.ajaxSetup({ scriptCharset: "windows-1252" , contentType: "application/json; charset=windows-1252"});
-  $.getJSON("logs/RC.log.json", function(jsonData) {
-    data = jsonData;
+  $.get("logs/algRun.log", function(rawdata) {
     console.log("Got data");
     // fixFilter();
     pageNo = 1;
-    displayLines(0);
+    var lines = rawdata.split("\n").reverse();
+    //var re = new RegExp('([0-9]+)\ +([0-9]{2}:[0-9]{2}:[0-9]{2}):\ +([^ ]+)\ +\(([A-Za-z]+)\)\ +\-\ +(.*)');
+    var re = new RegExp('([0-9]+)\\s+([0-9]{2}:[0-9]{2}:[0-9]{2}):\\s+([^ ]+)\ +\\(([^\\)]+)\\)\\s+-\\s+(.*)');
+    
+    for (var i=0; i<lines.length; i++) {
+      var flds = re.exec(lines[i]);
+      if (flds != null) {
+        data.push({module: flds[3], msg: flds[5], date: flds[1], time: flds[2], severity: flds[4]});
+      }
+      
+    }
     console.log("All done");
+    console.log("DATA ROWS: " + lines.length);
+    console.log("LOG ROWS: " + data.length);
+    console.log(lines[25]);
+    console.log(data[25].msg);
+    displayLines(0);
     // plotVideoGraph();
     $("#filter_msg").focus().select();
   });
@@ -38,7 +51,8 @@ function fetchData() {
 function fixFilter() {
   filter_loglevel = $("#filter_loglevel").val();
   filter_msg = $("#filter_msg").val();
-  filter(filter_msg);
+  filter_mod = $("#filter_mod").val();
+  filter(filter_msg, filter_mod);
   displayLines(0);
   $("#filter_msg").focus().select();
 }
@@ -51,7 +65,7 @@ function loglevelOK(logLevel, filterLogLevel) {
 
 // Go to next page
 function pageNext() {
-  var maxLines = ( filtered ) ? filterMap.length : data.log.length;
+  var maxLines = ( filtered ) ? filterMap.length : data.length;
   if (curPtr + linesPerPage < maxLines ) {
     pageNo++;
     displayLines(curPtr + linesPerPage);
@@ -75,7 +89,7 @@ function pageGoTo(pg) {
 
 // Go to the last page
 function pageEOF() {
-  var lastLine = ( filtered ) ? filterMap.length - 1 : data.log.length - 1;
+  var lastLine = ( filtered ) ? filterMap.length - 1 : data.length - 1;
   var ptr = ( lastLine >= linesPerPage ) ? lastLine - linesPerPage + 1 : 0;
   pageNo = Math.floor( ptr / linesPerPage ) + 1;
   displayLines(ptr);
@@ -91,6 +105,7 @@ function clearFilter() {
   filtered = false;
   $("#filter_msg").val("");
   filter_msg = "";
+  filter_mod = "";
   filter_loglevel = "";
   pageNo=1;
   displayLines(0);
@@ -141,7 +156,7 @@ function plotVideoGraph() {
    */
   var dataSet = [];
   var colors = ['steelblue', 'orange', 'yellow', '#00ff00',
-    '#a0a0a0', '#bc4923', '#981288', '#235578', '#10cc98',
+    '#a0a0a0', '#bc4923', '#981288', '#ffffff', '#10cc98',
     '#cc8888'];
   var metricIndex = [4, 5, 11, 7, 2, 3, 9, 8, 10, 6];
   var header = [ "P2P avg down rate", "Fallback avg down rt", "Total bufferings", "Prefetch",
@@ -164,10 +179,10 @@ function plotVideoGraph() {
   d3.select("#TheGraph").remove();
 
   var max1 = 0, min1, ts_first, ts_last;
-  for (var pt=0; pt<data.log.length; pt++) {
-    var isMatch = data.log[pt].msg.match(/\[video\]\s+([0-9.-]+)/ig);
+  for (var pt=0; pt<data.length; pt++) {
+    var isMatch = data[pt].msg.match(/\[video\]\s+([0-9.-]+)/ig);
     if (isMatch) {
-      var grp1 = data.log[pt].msg.match(/([0-9.-]+)/ig);
+      var grp1 = data[pt].msg.match(/([0-9.-]+)/ig);
       /* DEBUG
       var ls = "";
       for (var j=0; j<grp.length; j++) {
@@ -203,15 +218,15 @@ function plotVideoGraph() {
             return val * 1.0;
         }
       });
-      var dt = new Date( data.log[pt].ts / 1 );
+      var dt = new Date( data[pt].date / 1 );
       var tstamp = dt.toISOString().match(/(\d{4}\-\d{2}\-\d{2})T(\d{2}:\d{2}:\d{2})/)[2];
       if (sample/1 == Math.floor(sample/1))
         tstamps.push(tstamp);
 
       if (ts_first == undefined) { ts_first = tstamp; ts_last = tstamp; }
       if (tstamp > ts_last) ts_last = tstamp;
-      var minCandidate = Math.min.apply(Math,grp.slice(0,4));
-      var maxCandidate = Math.max.apply(Math,grp.slice(0,4));
+      var minCandidate = Math.min.apply(Math,grp.slice(0,11));
+      var maxCandidate = Math.max.apply(Math,grp.slice(0,11));
 
       // Fix max and min values
       if (min1 == undefined) { min1 =  minCandidate; }
@@ -310,11 +325,19 @@ function plotVideoGraph() {
     );
 
 
-  // return;
-  for (var gn=0; gn<dataSet.length; gn++) {
+  // Draw the lines
+  for (var gn=0; gn < dataSet.length; gn++) {
   // for (var gn=3; gn<4; gn++) {
     // graph.append("svg:path").attr("d", area1(dataSet[gn])).classed("data1 area", "true");
-    graph.append("svg:path").attr("d", line1(dataSet[gn])).classed("data1", "true").style("stroke", colors[gn]);
+    var l = graph.append("svg:path")
+      .attr("d", (gn==8)? area1(dataSet[gn]) : line1(dataSet[gn]))
+      .attr("stroke", colors[gn])
+      .style("fill", (gn==8)? colors[gn] : "none")
+      .style("fill-opacity", 0.1)
+      .style("stroke-opacity", 0.5);
+
+    if (gn==8)
+      l.moveTo
   }
   /*
   graph.append("svg:path").attr("d", line1(mtrP2PBps)).attr("class", "data2");
@@ -426,18 +449,22 @@ function bumpLayer(n, o) {
 }
 
 
-// Takes free-text parameter
-function filter(expr) {
+// Takes free-text parameters
+function filter(logExpr, modExpr) {
   filtered = true;
   filterMap = [];
-  filterExpr = new RegExp("("+expr+")", "i");
+  filterExpr1 = new RegExp("("+logExpr+")", "i");
+  filterExpr2 = new RegExp("("+modExpr+")", "i");
   console.log("Starting filter...");
-  for (var i=0; i < data.log.length; i++) {
-    if (expr != "")
-      if (data.log[i].msg.search(filterExpr) < 0)
+  for (var i=0; i < data.length; i++) {
+    if ((logExpr != "") || (modExpr != "")) {
+      if (data[i].msg.search(filterExpr1) < 0)
         continue;
+      if (data[i].module.search(filterExpr2) < 0)
+        continue;
+    }
     if (filter_loglevel != "")
-      if (!loglevelOK(data.log[i].ll, filter_loglevel))
+      if (!loglevelOK(data[i].severity, filter_loglevel))
         continue;
     filterMap.push(i);
   }
@@ -447,7 +474,7 @@ function filter(expr) {
 
 function displayLines(start) {
   curPtr = start;
-  var lastLine = ( filtered ) ? filterMap.length - 1 : data.log.length - 1;
+  var lastLine = ( filtered ) ? filterMap.length - 1 : data.length - 1;
   var lastPage = Math.floor( ( lastLine + 1 ) / linesPerPage );
   var lp2 = Math.ceil( ( lastLine + 1 ) / linesPerPage );
   if (lp2 > lastPage )
@@ -462,40 +489,41 @@ function displayLines(start) {
   log_filter_elm += "</select>";
 
   var msg_filter_elm = "<input value=\"" + filter_msg + "\" id=\"filter_msg\" maxlength='30' size='10' onChange=\"javascript:fixFilter();\">"
+  var mod_filter_elm = "<input value=\"" + filter_mod + "\" id=\"filter_mod\" maxlength='30' size='10' onChange=\"javascript:fixFilter();\">"
 
   // var html = "<tbody class=\"hive\">"
   var html = ""
     + "<tr class=\"big\">"
     + "<th>#"
-    + "<br/><span class=\"lineNumber\" id=\"linesFrom\" />"
-    + "<br/><span class=\"lineNumber\" id=\"linesTo\" />"
     + "</th>"
     + "<th class=\"tsheader\"><button id=\"prevPage\">&lt;</button>" + pageNo + "<button id=\"nextPage\">&gt;</button>"
     + "&nbsp;<button id=\"eofPage\">&gt;&gt;</button>"
-    + "<br/><div id=\"tslide\" style=\"margin-top: 5px;\"></div>"
-    + "<br/><div id=\"pslide\" style=\"margin-top: 5px;\"></div>"
     + "</th>"
-    + "<th>Thread</th>"
-    + "<th>LogLevel</th>"
-    + "<th>Class</th>"
+    + "<th>Severity</th>"
+    + "<th>Module</th>"
     + "<th>Message</th>"
     + "</tr>"
     + "<tr>"
-    + "<th></th>"
-    + "<th></th>"
-    + "<th></th>"
+    + "<th>"
+    + "<span class=\"lineNumber\" id=\"linesFrom\" />"
+    + "<br/><span class=\"lineNumber\" id=\"linesTo\" />"
+    + "</th>"
+    + "<th class=\"tsheader\">"
+    + "<div id=\"tslide\" style=\"margin-top: 5px;\"></div>"
+    + "<div id=\"pslide\" style=\"margin-top: 5px;\"></div>"
+    + "</th>"
     + "<th>" + log_filter_elm + "</th>"
-    + "<th></th>"
+    + "<th>" + mod_filter_elm + "</th>"
     + "<th>" + msg_filter_elm
     + "&nbsp;<button id=\"clearFilter\">Clear</button>"
-    + "&nbsp;<button id=\"plotVideo\">Plot Video</button>"
+    // + "&nbsp;<button id=\"plotVideo\">Plot Video</button>"
     + "</th>"
     + "</tr>";
 
   var onGuidClick = "onClick=\"alert('This would take you to the associated GUID log.');\"";
   for (var offset=0; offset<linesPerPage; offset++) {
     var lineNo = start + offset;
-    if (lineNo >= data.log.length)
+    if (lineNo >= data.length)
       break; // We've reached EOF
     if (filtered) {
       if (lineNo >= filterMap.length)
@@ -504,20 +532,23 @@ function displayLines(start) {
     }
 
     // var dt = new Date( Date(data.log[lineNo].ts ));
-    var dt = new Date( data.log[lineNo].ts / 1 );
-    var ltime = dt.toISOString().match(/(\d{4}\-\d{2}\-\d{2})T(\d{2}:\d{2}:\d{2})/);
+    // var dt = new Date( data.log[lineNo].ts / 1 );
+    // var ltime = dt.toISOString().match(/(\d{4}\-\d{2}\-\d{2})T(\d{2}:\d{2}:\d{2})/);
     // Highlight GUIDs
-    var msg = data.log[lineNo].msg.replace(/(guid[:= ]*)([0-9a-f]{20,})/ig, "$1\<span " + onGuidClick + " class=\"highlight-guid\"\>$2\<\/span\>");
+    // var msg = data.msg[lineNo].msg.replace(/(guid[:= ]*)([0-9a-f]{20,})/ig, "$1\<span " + onGuidClick + " class=\"highlight-guid\"\>$2\<\/span\>");
+    var msg = data[lineNo].msg;
+    var modl = data[lineNo].module;
     // Highlight search hits
-    if (filtered)
-      msg = msg.replace(filterExpr, "\<span class=\"highlight-text\"\>$1\<\/span\>");
+    if (filtered) {
+      msg = msg.replace(filterExpr1, "\<span class=\"highlight-text\"\>$1\<\/span\>");
+      modl = modl.replace(filterExpr2, "\<span class=\"highlight-text\"\>$1\<\/span\>");
+    }
 
-    html += "<tr class=\"log-" + data.log[lineNo].ll.toLowerCase() + "\">"
+    html += "<tr class=\"log-" + data[lineNo].severity.toLowerCase() + "\">"
       + "<td>" + (lineNo+1) + "</td>"
-      + "<td>" + ltime[1] + " " + ltime[2] + "</td>"
-      + "<td>" + data.log[lineNo].th + "</td>"
-      + "<td>" + data.log[lineNo].ll + "</td>"
-      + "<td>" + data.log[lineNo].cl + "</td>"
+      + "<td>" + data[lineNo].date + " " + data[lineNo].time + "</td>"
+      + "<td>" + data[lineNo].severity + "</td>"
+      + "<td>" + modl + "</td>"
       + "<td>" + msg + "</td>"
       + "</tr>";
   }
